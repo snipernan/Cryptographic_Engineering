@@ -19,6 +19,16 @@ def invert(e, phi):
         y1 = y
     if temp_phi == 1:
         return d
+    
+#python自带的pow函数，已经非常快了，这里还是用了pow函数
+def quick_pow(a, b, c):
+    ans = 1
+    while b != 0:
+        if b & 1:
+            ans = (ans * a) % c
+        b >>= 1
+        a = (a * a) % c
+    return ans
 
 def CRT_RSA(c, d, n, p, q):
     dp = d % (p - 1)
