@@ -36,8 +36,6 @@ def cov(X, X_bar, Y, Y_bar):
     return np.sum((X-X_bar)*(Y-Y_bar),axis=0)
 
 def DPA(trace, textin_array):
-    trace_mean = np.average(trace, axis=0)
-    trace_stddev = np.sqrt(np.sum((trace - trace_mean)**2, axis=0))
     dpa_correlation = [0] * 16
     best_guess = [0] * 16
     for byte in trange(0, 16):
@@ -45,19 +43,41 @@ def DPA(trace, textin_array):
         for k_guess in range(0, 256):
             list_0 = []
             list_1 = []
-            hamming_weights = np.array([[HW[aes_internal(textin[byte], k_guess)] for textin in textin_array]]).transpose()
-            for i in range(0, 1000):
-                if hamming_weights[i][0] == 0:
+            hws = np.array([[HW[aes_internal(textin[byte], k_guess)] for textin in textin_array]]).transpose()
+            for i in range(len(trace)):
+                if hws[i] == 0:
                     list_0.append(trace[i])
-                elif hamming_weights[i][0] == 1:
+                else:
                     list_1.append(trace[i])
-            array_0 = np.array(list_0)
-            array_1 = np.array(list_1)
-            average_0 = np.sum(array_0, axis=0) / array_0.shape[0]
-            average_1 = np.sum(array_1, axis=0) / array_1.shape[0]
+            average_0 = np.mean(list_0, axis=0)
+            average_1 = np.mean(list_1, axis=0)
             dpa_output = np.subtract(average_0, average_1)
             max_dpa[k_guess] = max(abs(dpa_output))
-    
+        best_guess[byte] = np.argmax(max_dpa)
+        dpa_correlation[byte] = max(max_dpa)
+    print("Best Key Guess: ", end="")
+    for b in best_guess:
+        print("%02x " % b, end="")
+    print("\n", dpa_correlation)
+
+def MSB_DPA(trace, textin_array):
+    dpa_correlation = [0] * 16
+    best_guess = [0] * 16
+    for byte in trange(0, 16):
+        max_dpa = [0] * 256
+        for k_guess in range(0, 256):
+            list_0 = []
+            list_1 = []
+            msbs = np.array([[aes_internal(textin[byte], k_guess) >> 7 for textin in textin_array]]).transpose()
+            for i in range(len(trace)):
+                if msbs[i] == 0:
+                    list_0.append(trace[i])
+                else:
+                    list_1.append(trace[i])
+            average_0 = np.mean(list_0, axis=0)
+            average_1 = np.mean(list_1, axis=0)
+            dpa_output = np.subtract(average_0, average_1)
+            max_dpa[k_guess] = max(abs(dpa_output))
         best_guess[byte] = np.argmax(max_dpa)
         dpa_correlation[byte] = max(max_dpa)
     print("Best Key Guess: ", end="")
