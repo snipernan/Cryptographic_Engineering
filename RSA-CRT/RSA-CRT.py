@@ -1,4 +1,5 @@
 import time
+from sympy import nextprime
 
 def invert(e, phi):
     d = 0
@@ -19,40 +20,51 @@ def invert(e, phi):
         y1 = y
     if temp_phi == 1:
         return d
-    
-#python自带的pow函数，已经非常快了，这里还是用了pow函数
-def quick_pow(a, b, c):
-    ans = 1
-    while b != 0:
-        if b & 1:
-            ans = (ans * a) % c
-        b >>= 1
-        a = (a * a) % c
-    return ans
 
-def CRT_RSA(c, d, n, p, q):
+def prepare_RSA_CRT(d, p, q):
     dp = d % (p - 1)
     dq = d % (q - 1)
     q_1 = invert(q, p)
     q_inv = q_1 % p
+    return dp, dq, q_inv
+
+def CRT_RSA(c, dp, dq, q_inv, p, q):
     m1 = pow(c, dp, p)
     m2 = pow(c, dq, q)
     h = (q_inv * (m1 - m2)) % p
     m = m2 + h * q
     return m
 
+# Generate large prime numbers for RSA
+p = nextprime(int(1e100))
+q = nextprime(p)
+phi = (p - 1) * (q - 1)
+n = p * q
+
+# Choose e such that it is co-prime with phi(n)
+e = 65537
+d = invert(e, phi)
+
+# Prepare RSA-CRT
+dp, dq, q_inv = prepare_RSA_CRT(d, p, q) 
+
+# Choose a large number for c
+c = int(1e120) % n
+
 # CRT-RSA
 start_time = time.time()
-for i in range(10000):
-    m = CRT_RSA(1234567866666666666665, 233333333333449, 144188797283, 379721, 379723)  # 使用合适的输入参数进行测试
+for i in range(1000):
+    m = CRT_RSA(c, dp, dq, q_inv, p, q) 
 end_time = time.time()
+print("CRT-RSA Result:", m)
 print("CRT-RSA Time:", end_time - start_time)
 
 # Standard RSA
 start_time = time.time()
-for i in range(10000):
-    a = pow(1234567866666666666665, 233333333333449, 144188797283)  # 使用合适的输入参数进行测试
+for i in range(1000):
+    a = pow(c, d, n)
 end_time = time.time()
+print("Standard RSA Result:", a)
 print("Standard RSA Time:", end_time - start_time)
 
 print("Correctness:", a == m)
